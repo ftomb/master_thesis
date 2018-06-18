@@ -1,0 +1,299 @@
+% !TEX root = ../main.tex
+
+
+\chapter{Intonation Modeling}\label{chap:intonation-modeling}
+
+In this section, I shall provide a detailed description of the dedicated \ac{DNN} model that I implemented for the prediction of intonation.
+The description of the inputs and outputs have been amply explained and justified in the previous sections, where I also showed how they are converted into suitable vectors that can be fed to the model.
+The input is comprised of two sets of one-hot vectors: one for the lemma information and the other for all the other textual information.
+The output also consists of two sets of one-hot vectors: one for the sign and one for the magnitude information.
+
+Here, I will present the \ac{DNN} architecture that is tasked with the mapping of the inputs to the outputs and I will provide the reasoning behind various implementational choices that were made, many of which were arrived at by trial and error after much experimentation.
+
+In the first part of this section, I will provide a general overview of the architecture, including its main features and components.
+Subsequently, I will delve into various implementational and architectural choices and reasons in much greater detail.
+
+
+\vfill
+
+\section{General Overview}
+
+
+The \ac{DNN} model, shown in \autoref{fig:dnn-pipeline}, is structured into three main components:
+a word embedding component, a linguistic interaction component and a prediction component.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.75]{figures/dnn-pipeline.pdf}
+    \vspace*{5mm}
+    \caption[Intonation model pipeline]{\ac{DNN} pipeline. 
+      The dependencies on the previous states are represented by dashed arrows, and the forward dependencies, by plain arrows.
+      The blue box corresponds to a \acs{FFNN},
+      the red box, to a network composed by a feed-forward layer and a bidirectional recurrent layer, and
+      the green box, to a network composed of a feed-forward layer and a forward recurrent layer.}
+    \label{fig:dnn-pipeline}
+\end{figure}
+
+
+The word embedding \citep{Levy2014Neural} component is comprised of three  feed-forward layers of the following sizes: 2048, 1024, 512.
+The main function of this component is to convert the one-hot word vectors into smaller, denser vectors by projecting the lemma information into a dedicated reduced space.
+
+The next component is the linguistic interaction component.
+At this stage, the output of the word embedding component is concatenated with all the other linguistic inputs and passed through one feed-forward layer of size 512.
+
+The purpose of this feed-forward layer is to merge the dense lemma representations and the other linguistic inputs.
+This gives inputs a chance to have some local interaction before they are fed to additional layers.
+
+Once the inputs have been processed locally, i.e., within the time step they were emitted, they are fed to pair of \ac{BRNN} layers with 512 \ac{GRU} neurons each.
+The purpose of the bidirectional layers is to capture contextual interaction through time.
+
+The last component is composed of two similar sub-components.
+These are tasked with the prediction of the sign and magnitude of the dynamic of the \ac{F0}, respectively.
+Each sub-component is composed of a simple feed-forward layer of 512 nodes and a forward recurrent layer of 256 \ac{GRU} neurons, to take the context into account.
+
+The input to this last component is the backward and forward states produced by the previous component, plus its own recurrent sign and magnitude states.
+In order to align the sign and the magnitude predictions, the magnitude sub-component has additional input coming from the output of the sign sub-component.
+ELU \citep{Clevert2015Fast} is used as the activation function for all neurons in the model.
+
+
+
+
+
+
+\section{Architectural Details}
+
+
+
+\subsection{Word embedding}
+
+
+In the proposed approach, the training of the word vectors is integrated with the rest of the linguistic features within a single common structure.
+The reason behind this choice is that neural networks can model very subtle interactions and detect very fine-grained correlations.
+By training word vectors separately, the network cannot guide the dimensionality reduction on the basis of the interactions that these dense word vectors will have downstream with other inputs.
+By training all the labels within the same instance, all the interactions between linguistic labels and output labels are allowed to flow back into the feed-forward word layers.
+
+However, because of the size of the word inputs, integrating the training of word embeddings within a common structure can cause significant performance degradation at inference time.
+To overcome this, word vectors are given a number of dedicated feed-forward layers, to project the large input vectors into smaller dense vectors.
+After the network has been trained, the dense word vectors can be extracted by feeding the one-hot word vectors one after the other.
+For each word we can then push the input thought network right until the last feed-forward word layer of the word embedding component.
+This last forward layer can be saved and used during inference in lieu of the original one-hot word vectors, thus bypassing the computationally expensive word embedding component.
+
+
+\subsection{Linguistic interaction}
+
+The linguistic interaction component is tasked with modeling both the local interaction between word and non-word features, but also contextual interactions across multiple time steps.
+In the proposed approach, these temporal interactions are modeled by means of \ac{BRNN} layers.
+However, this is not the only possible approach, as these could also be modeled with feed-forward layers. 
+
+\acp{FFNN} have successfully been used in \citet{Vainio2001Artificial} to model time series in the context of intonation modeling. 
+In their work, the use of feed-forward layers is appropriate, as the author explains that their intention is not to model trajectories or curves directly, but rather instantaneous values within an utterance.
+
+Under their approach, contours are not treated as events that unfold through time, but rather as something more akin to ``static pictures'', where trajectories are just a side-effect of correctly predicting the static values.
+The task of the network would then be to match snippets of linguistic inputs to snippets of contour ``pictures''.
+Given their initial assumptions and the way their work was set up, it makes sense to use feed-forward layers.\footnote{or even convolutional layers, I would venture to suggest.}
+
+However, within the proposed methodology, this approach does not seem to be appropriate, as the proposed \ac{DNN} is based on a completely different set of assumptions, most of which are antithetical to those underlying their work.
+In particular, the main assumption underlying my proposal is that contours are not to be viewed as sequences of ``static pictures'' that we try to fit together in a sequence, but rather as sequences of instructions of interpretable prosodic commands.
+
+Even though \acp{FFNN} can in principle learn time series by using a sliding window, a more common and elegant way to approach tasks involving time series or forecasting is to use \acp{RNN}.
+\acp{RNN} are especially suitable for the modeling of time series, as they can be fed arbitrarily long sequences of data, whereas \acp{FFNN} can only model fixed size windows.
+Once the size of the window has been decided, we cannot feed inputs whose size is larger than that of the window.
+Similarly, inputs of smaller sizes either need to concatenated with other inputs to fill up the input window, or they need to be padded.
+Given these limitations associated with \acp{FFNN}, in the proposed model, interactions over time are modeled by means of recurrent layers.
+
+As \acp{RNN} comes in different flavors, it is important to select the most suitable architecture for the task at hand.
+Vanilla \acp{RNN} are not optimal for my task, because they can only read the inputs one after the other, with the result that our context is limited to only past observations. 
+
+Even though humans almost never read the entire sentence before reading it out loud, they typically do look ahead and make use of many direct and indirect clues that the network has no access to. 
+For instance, humans can extrapolate a lot of information about the general length and structure of a sentence or a paragraph by noticing punctuation symbols, line breaks, etc. 
+For all these reasons, it would be desirable to present the neural network with both past and future inputs. 
+
+This can be achieved using \acp{BRNN}, where one recurrent layer reads the input forwards and the other backwards. 
+Additionally, \citet{Schuster1997Bidirectional} have shown that \acp{BRNN} achieve better performance than vanilla unidirectional \acp{RNN}.
+
+
+\subsection{Feed-back Connections}
+
+The last component of the the proposed \ac{DNN} architecture is characterized by a rather complex structure, with multiple inputs and recurrent feed-back connections feeding into it.
+
+This is in contrast with many other approaches, where the output of \acp{BRNN} is fed directly to the output layer to produce a prediction.
+This approach would be more than sufficient if we were in the situation in which the input features can only map to one possible output sequence. 
+However, in many sequence-to-sequence problems this is often not the case.
+Consider for instance the case of \ac{MT}: for every sentence in the source language there are potentially multiple ways in which it can be rendered in the target language.
+
+In this scenario, the task of the neural network is twofold: on the one hand, it has to predict an output sequence that would be fitting for the input sequence; on the other, it has to make sure that each possible rendition of the input sequence is cohesive and coherent within itself.
+This means that in the event in which for some input sequence there are two possible output sequences that the network could predict and these two sequences are just as likely, we want the neural network to commit to one and only one of the two possibilities and not to blend different elements from the two that might not coherently fit together.
+
+In \ac{MT}, this problem is often solved by means of feedback and attention mechanisms \citep{Cho2014Learning, Luong2015Effective}. 
+Attention mechanisms make sure the network learns to which parts of the inputs it should attend at every step of the prediction.
+This is especially important when the inputs are temporally not aligned with the outputs (e.g., when translating from English to German, the verb sometimes has to move to the end of the sentence).
+
+In our particular case, an attention mechanism is not necessary, because our inputs and outputs are already aligned along the time domain.
+So, to make sure predictions were coherent, feedback connections from previous outputs are sent into current processing layers. 
+This technique has also been used in the context of \ac{MT} to ensure local fluency \citep{Cho2014Learning}.
+
+The introduction of feedback connections is also justified by evidence about the importance of feedback in speech \citep{Borden1980Use}.
+Particularly in what concerns intonation, it has been observed that, in postlingually deafened adults, intonation patterns undergo a progressive process of deterioration when feedback weakens as a consequence of hearing loss \citep{Lane1991Speech}.
+Alterations in pitch pattern production are also observed in adults with unimpaired hearing in response to manipulated pitch feedback \citep{Burnett1998Voice}.
+Adding feedback mechanisms to our network serves as a way to simulate the ability that humans have to hear and utilize their own previous pitch patterns in the generation of subsequent ones.
+
+In order to model sign and magnitude simultaneously, both predictions are integrated within a single shared task.
+In \ac{ML}, this technique is commonly referred to as \ac{MTL}.
+Aside from the ability to share tasks, there are many additional advantages in using \ac{MTL}: it promotes selection of representations that are useful for all tasks, it allows for transfer learning, it can help focus attention on features that are most relevant, and it provides strong regularization \citep{Ruder2017overview}.
+
+In order to add this sharing-task feature to my network, I first added two parallel feed-forward layers (i.e., the output of one feed-forward layer does not feed into the other), one for the sign and one for the magnitude, where each has its own set of parameters.
+Each of the two feed-forward layers takes as input the concatenated current forward and backward states from the bidirectional layers, plus the sign and magnitude outputs predicted at the previous time step.
+Then, in order to model sign and magnitude interactions across time, I added one recurrent layer for the sign and one for the magnitude.
+Just like the feed-forward layers on top of which they sit, these two recurrent layers run alongside each other, and each has its own set of parameters.
+One of these recurrent layers makes predictions for the sign, and the other, for the magnitude.
+
+At each time step the layers involved in the prediction of the sign receive information about the sign and magnitude that have been emitted in the previous time step.
+Likewise, the layers involved in the prediction of the magnitude also receive information about the sign and magnitude that have been predicted.
+This makes sure that the two sets of layers involved in each task can realign themselves to the other at each time step.
+
+However, even with feedback connections that allow for realignment, we might still have problems of inconsistency within each time step.
+This is because the layers involved with the prediction of, say, the magnitude receive only information about what sign and magnitude have been emitted in the previous step, but they do not have access to what the current sign prediction is.
+To reduce the chance of inconsistencies within each time step, a connection between the current sign prediction and the current magnitude forward layer has been added.
+Under this approach, we assume that the task of sign prediction takes precedence over the task of magnitude prediction.
+The idea is that we first decide in which direction we want to move and then we can decide exactly the amount by which we move into that direction.
+
+One important implementation detail is that, during the back-propagation stage, we must not propagate the magnitude error through its connection to the current sign prediction.
+If we neglect to take this crucial step, the error from the magnitude will flow into the layers dedicated to the prediction of the sign, which can cause the magnitude error signal to completely take over the sign representations so that they become predictive of the magnitude.
+Not only would this defeat the whole purpose of dividing the network into two tasks, but, in my experience, it can often lead to gradient-related errors.
+
+In conclusion, at each time step, the prediction of the sign is conditioned on all the previous, current, and subsequent linguistic inputs, as well as the previous sign and magnitude predictions.
+The prediction of the magnitude, on the other hand, is conditioned on all the previous, current, and subsequent linguistic inputs, as well as the previous sign and magnitude predictions, as well as the sign predicted at the current time step.
+The predictions that the network emits for both the sign and the magnitude will be used together with the output vectors that we feed to the network as to compute an error function describing the distance between our prediction and the training data.
+
+
+
+\subsection{The Error Function}
+
+
+There are two main error functions that are very popular in the context of deep learning: one is the \ac{RMSE} and the other is the cross-entropy error.
+
+As my problem is not formulated as a classification task, the cross-entropy error function is used.
+Even though it is theoretically possible to perform classification using the \ac{RMSE} error function, it has been found that the cross-entropy function leads to faster training and better generalization in classification tasks \citep{Golik2013Cross, Simard2003Best}.
+
+
+
+\subsection{The Optimizer}
+
+In contrast with recent and popular trends of using adaptive per-parameter learning methods such as Adagrad \citep{Duchi2011Adaptive}, Adadelta \citep{Zeiler2012ADADELTA}, Rmsprop \citep{Dauphin2015Equilibrated}, Adam \citep{Kingma2014Adam} and Nadam \citep{Dozat2016Incorporating}, I decided to adopt a variant of the classical \ac{SGD} algorithm.
+
+Recently, it has been found that, for over-parametrized problems, as it is the case for most current deep learning applications, adaptive optimization methods can produce drastically different solutions, as well as models that generalize significantly worse than \ac{SGD}, even when they perform better on the training data \citep{Wilson2017Marginal}.
+This observation was also at the basis of one of the recommendations offered by \citet{Hoffer2017Train} on how to train models that can generalize better.
+
+For these reasons, in my implementation I used \ac{SGD} with Nesterov Momentum, also called \ac{NAG}, which is a faster variant of Momentum optimization \citep{Nesterov1983method}.
+
+
+\section{Accuracy Issues}
+
+One issue that is particularly hard to address in intonation modeling is how to measure accuracy during the training phase and what stopping criterion should be used.
+
+When intonation is treated as a regression problem, i.e., when using log(\ac{F0}) as input and \ac{RMSE} error as the error function, the obvious solution would be to simply use the loss on the function as a measure of accuracy.
+By calculating the loss on both the training and the validation set we can stop training as soon as the loss on the validation set starts increasing.
+This is a commonly employed technique also known as early-stopping.
+
+The problem is that intonation is a highly unpredictable phenomenon.
+For every sentence, multiple completely different, yet plausible, renditions are possible.
+Which one of these should be predicted is highly dependent on a number of contingent factors (e.g., linguistic context, the speaker's psychological state,  the addressee, etc.), many of which are not available to the network. 
+This means that at some point of the training process, we might produce contours that sound natural because they capture general prosodic properties from the corpus very well.
+However, the loss from these contours might be very high because the reference sentences just happen to be a completely different and equally plausible rendition of the input.
+A consequence of this possibility is that we cannot heavily rely on the loss of the neural network to measure the progress on the training.
+
+
+As we currently do not have a reliable method to automatically measure the appropriateness of a specific contour against a specific set of linguistic inputs, the strategy adopted in my methodology was to save a copy of the model at the end of each epoch.
+After training, I selected one by listening to the synthetic contours it generated for the validation set.
+
+
+
+\section{Overfitting Issues}
+
+The reason why it is so important to determine the most appropriate time to stop the training of the network is because models produced at different epochs will be radically different.
+
+If we train the model for too long, we start capturing too many details about the training data, many of which are specific to the training set and will not generalize well for new observations.
+This phenomenon is due to fitting the training data too closely and in machine learning it is also known and overfitting.
+
+The chance of overfitting is particularly high in my model, because of the high number of parameters and the inclusion of very large layers for word vectors.
+One commonly used technique to alleviate this problem, is dropout.
+With dropout, the contributions of a subset of the neurons during training \citep{Srivastava2014Dropout} are temporarily and randomly excluded.
+This process introduces noise and temporarily prevents some of the inputs from reaching all the nodes in the network, thus reducing the chance that complex co-adaptations might emerge and forcing the network to make predictions only from partial sources of information.
+Despite its simplicity, dropout is very effective at reducing overfitting and is one of the most common regularizing techniques used in deep learning.
+
+Because of these reasons, I added dropout to all the feed-forward layers of the network.
+This substantially alleviated the overfitting problem, which resulted in more consistent models across training epochs.
+
+In previous sections, feed-forward layers preceding recurrent layers were justified as locations in the network to allow for local interactions between inputs.
+In addition to this main reason, feed-forward layers were also used to provide a convenient location to apply dropout.
+
+In my architecture, there are many locations where one-hot vectors are concatenated with dense vectors before they are processed by recurrent layers.
+For instance, non-word linguistic inputs are concatenated with feed-forward layers before they are passed through bidirectional layers.
+
+As we cannot apply dropout to very sparse vectors such as the one-hot vectors (because most of their inputs are already mostly zeros), feed-forward layers provide for a convenient location where we can merge sparse inputs with dense inputs to create a single dense representation, onto which dropout can be applied.
+
+\section{Data augmentation}
+
+Even though dropout produced a substantial improvement in the quality of the synthetic contours and greatly increased consistency across models, many of the predicted contours still contained extreme and implausible pitch excursions or pitch drops.
+
+My hypothesis for this behavior was that the network was suffering from the so-called \textit{exposure bias} problem.
+Exposure bias refers to a phenomenon often observed in generative models where outputs are fed back and used as inputs for subsequent output generation.
+
+As explained by \citet{Ranzato2015Sequence}, the problem is that during training, the model only utilizes the gold-standard output as its feedback and not its own predictions, which at inference time are bound to contain some errors or deviations from the original distribution.
+This discrepancy makes prediction brittle, as generation errors may accumulate over time.
+
+One way to solve this issue is to randomly expose the network to either the ground-truth or its own predictions during training.
+However, this approach has been argued to be theoretically flawed \citep{Huszar2015How} and not particularly successful in the context of \ac{F0} modeling \citep{Wang2017RNN}, where instead one of the proposed solutions is to use dropout to occasionally remove feedback.
+However, in my network I already had dropout applied to the feedback connections and although dropout did help improve performance, it never completely eliminated the problem.
+
+One thing I noticed was that often, the most problematic utterances were also the longest.
+On the one hand, this behavior is expected, as it is consistent with the exposure bias hypothesis: longer utterances allow for a larger margin of error, as we have more steps to predict and therefore more opportunities for generating errors.
+On the other hand, I could not understand why, once the prediction starts moving in the wrong direction, the network is unable to detect it and correct it.
+
+It is easy to understand why generation errors are very problematic in language modeling, where interactions between words may have very unpredictable effects and errors are very hard to recover from.
+In humans, recovering strategies from these kind of errors is anything but trivial, as it often involves cognitively challenging tasks such as detecting the problem in the first place, rephrasing the problematic segment, or finding a convoluted and yet graceful way of still completing the utterance.
+These are all tasks that most neural networks are not trained to perform.
+
+In our case, the property that we want to capture, and that is required to avoid getting out of a certain range, is a lot coarser and easier to define.
+This property is very apparent when we observe the \ac{F0} contour over very long stretches of speech such as in \autoref{fig:pseudo-periodicity}: pseudo-periodicity.
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/pseudo-periodicity.pgf}}
+\caption[Pseudo-periodicity of long contours]{\ac{F0} contour of a long (30~s) stretch of speech from the corpus. Notice how the signal presents a pseudo-periodic behavior: even though it is not periodic, peaks and valleys appear at fairly regular intervals.}
+\label{fig:pseudo-periodicity}
+\end{figure}
+
+Even though over the course of a single utterance, a typical \ac{F0} contour might display a declining (i.e., in the case of a declarative) or rising (i.e., in the case of questions) trajectory, over the course of arbitrarily long sequences, \ac{F0} contours are pseudo-periodic, i.e., on average they move neither up nor down, as the \ac{F0} values simply oscillate around a mean value.
+
+This property is not immediately obvious if one only looks at the distribution of the static values shown in \autoref{fig:interp-distr}.
+However, if we look at \autoref{fig:interval-distr}, we can clearly see that the distribution of the pitch intervals is mirrored around the centre (zero).
+As we can see, for each positive interval there is a negative one, which means that over the course of a sufficiently long stretch of time the contours behave in a pseudo-periodic fashion.
+
+My explanation as to why the network fails to capture this behavior is that the corpus is composed of mostly short utterances.
+The most common patterns in most training utterances are \ac{F0} contours that either follow a globally declining (in declarative) or rising trajectory (in questions), but only a few longer ones display the pseudo-periodic property I just described.
+So what might happen when the network is expected to predict unusually long sequences is that it will keep producing the the same declining or rising trajectory observed in shorter sentences, even though this entails moving outside the human voice range.
+
+To fix this, the data was augmented by stitching contiguous utterances back together.
+The idea is that, by doing so, each training utterance will be much closer to the global distribution of the whole corpus.
+As a consequence, even if mistakes are produced during generation, the network will attempt to make use of the incorrect histories to still produce a pseudo-periodic behavior, thus greatly reducing the change of moving outside of the human voice range.
+
+This technique, in conjunction with dropout, proved to be a very effective way of alleviating both the problem of extreme pitch excursions/falls, as well as the out-of-range contours.
+After applying these techniques, the distribution of the static \ac{F0} values and pitch intervals the test data (\autoref{fig:test-f0-distr} and \autoref{fig:test-interval-distr}, respectively) was fairly similar to the corresponding distribution for the training data (\autoref{fig:interp-distr} and \autoref{fig:interval-distr}, respectively).
+
+
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/test-f0-distrb.pgf}}
+\caption[Interpolated \ac{F0} test distribution]{Plot of the interpolated \ac{F0} values predicted for the test set.}
+\label{fig:test-f0-distr}
+\end{figure}
+
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/test-interval-distrb.pgf}}
+\caption[Pitch interval test distribution]{Plot of the distribution of the pitch intervals generated by the encoding process for the test set.}
+\label{fig:test-interval-distr}
+\end{figure}

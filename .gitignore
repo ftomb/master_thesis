@@ -1,0 +1,6 @@
+# LaTeX
+main.*
+sections/*.aux
+
+# OSX
+.DS_Store

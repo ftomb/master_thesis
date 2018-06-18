@@ -1,0 +1,56 @@
+% import packages
+\usepackage[tableposition=below]{caption}
+
+\usepackage{geometry}
+\geometry{bindingoffset=2cm}
+\usepackage[english]{babel}
+\usepackage[round]{natbib}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{setspace}
+\usepackage{tabularx}
+\usepackage{tabulary}
+\usepackage{textcomp}
+\usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{wasysym}
+\usepackage{amsthm}
+\usepackage{array}
+\usepackage{float}
+\usepackage{tipa}
+\usepackage{tikz}
+\usepackage{acro}
+\usepackage{gb4e}
+\usepackage{doi}
+\usepackage{pgf}
+\usepackage{url}
+
+
+\usepackage{changepage}
+
+
+
+% environment for equations
+\newenvironment{conditions}
+  {\par\vspace{\abovedisplayskip}\noindent\begin{tabular}{>{$}l<{$} @{${}={}$} l}}
+  {\end{tabular}\par\vspace{\belowdisplayskip}}
+  
+  
+% provide paths to figures
+\graphicspath{{figures/}}
+
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{matrix,chains,positioning,decorations.pathreplacing,arrows}
+
+\def\UrlBreaks{\do\/\do-}
+
+% adapted from https://tex.stackexchange.com/a/186948
+\addto\extrasenglish{%
+  \renewcommand{\chapterautorefname}{Chapter}%
+  \renewcommand{\sectionautorefname}{Section}%
+}

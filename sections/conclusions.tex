@@ -1,0 +1,78 @@
+% !TEX root = ../main.tex
+
+\chapter{Conclusions}\label{chap:conclusions}
+
+In this thesis, I have presented a dedicated methodology for the modeling of \ac{F0} using a deep learning approach.
+
+The core idea behind the proposed approach is to model the dynamic evolution of the interpolated \ac{F0} through time from a starting position, where the dynamic is parametrized by a sign value for the direction of change, and a quantized magnitude value for the amount of change in such direction.
+The predicted contour is shifted within the frequency to match the speaker's register.
+The proposed approach also attempts to inform intonation modeling with semantically richer information by including word embeddings.
+
+After justifying and motivating these underlying ideas, the proposed methodology has been implemented into a \ac{DNN} model in the context of \ac{SPSS}.
+Each part of the implementation design has been justified and motivated.
+
+The implemented intonation model has then been evaluated in comparison to the state-of-the-art parametric  \ac{TTS} system Merlin.
+The evaluation has shown that the proposed methodology performs just as well as the state-of-the-art and there seems to be a trend for native listeners to actually prefer the proposed model.
+
+Most past and current approaches to intonation modeling have been solely focused on a static description of intonation.
+This thesis represents a marked departure from these more established approaches, as intonation was modeled as a purely dynamic phenomenon.
+The evaluation conducted in this thesis has shown that this approach produces results that are on par with (if not slightly better than) the state-of-the-art Merlin system, confirming the validity of the proposed methodology as a new and legitimate direction of research.
+
+
+\section{Perspectives and Future Work}
+
+\subsection{Magnitude Relativization}
+
+
+In the proposed \ac{F0} encoding scheme, pitch is encoded as a relative phenomenon: each pitch value is defined in relation to the previous one.
+This is in opposition the absolute description of static approaches, where each pitch value is defined with respect to its absolute position within the frequency domain.
+
+One possible direction of research could be to explore ways of relativizing the description of pitch even further.
+In the proposed encoding scheme, magnitude is defined in an absolute way, as each pitch interval is pre-defined based on the underlying reference scale.
+Future research might try to describe each magnitude value in relation to the previous one.
+
+Describing the magnitude in a relative way would make the representation of pitch more invariant to dilation and compression, as the depth of each fall and rise would be described relative the previous ones.
+In the proposed methodology, the final predicted contour is shifted to match the speaker's register.
+If the magnitude is relativized, the final predicted contour could also be adjusted based on a scaling factor to produce a target overall level of compression/dilation.
+This scaling factor describing compression/dilation could be important to capture differences between speakers, speaking styles, genres, etc.
+
+\subsection{Larger Speech Corpora}
+
+The proposed methodology has been implemented in the context of a deep learning paradigm.
+\ac{DNN} training is notoriously data-hungry and only really shines for problems where a vast amount of data is available.
+However, the evaluation conducted in this thesis was based on a fairly small speech corpus (3 h and 57 mins).
+In light of the small size of the training corpus, there is only so much that any given \ac{DNN} model might be able to capture.
+
+An interesting question for future research would be whether the observed trend for native speakers to prefer the proposed methodology would be amplified if the model were trained on a much larger speech corpus. 
+The proposed approach was designed to make use of semantically richer information by means of word embeddings.
+
+However, because of the small size of the corpus, each lemma is observed only a handful of times.
+Consequently, the \ac{DNN} model might just be unable to produce a meaningful representation for most lemmata.
+It would be interesting to explore whether using vastly larger data sets would result in significant performance gains.
+
+\subsection{Wavelet Parametrization}
+
+Wavelet-based techniques have shown a lot of promise in the field of intonation modeling.
+However, as a number of researchers are already actively working on it, this thesis was focused on experimenting on new untested ideas.
+However, this does not entail that the proposed methodology and wavelets are mutually exclusive.
+In fact, an interesting future direction of research could be to explore ways of extending the proposed methodology with wavelet parametrization.
+
+One of the major issues of the proposed encoding scheme discussed here was its vulnerability to exposure bias at generation time.
+My explanation for this behavior is the fact that the encoding scheme is based on a chain of prosodic commands, where the interpretation of each is dependent on the previous one.
+Because of this property, generation errors can easily propagate and accumulate along the generation chain.
+This issue was largely addressed by using data regularization and data augmentation techniques.
+
+However, wavelets might actually provide a better solution to this problem.
+By decomposing the contour into sub-components, more global phenomena could be modeled with far fewer data points, which would entail shorter generation chains and, conceivably, less \emph{exposure bias} overall.
+
+\subsection{Evaluation Protocol}
+
+In this thesis, the proposed approach was evaluated with a dedicated evaluation protocol.
+Because the evaluation was delivered over the internet, the evaluation also had a number of constraints and limitations, which made more qualitative analysis impossible.
+Despite its limitations, the evaluation protocol was still able to show a strong preference for the natural intonation.
+This validates the protocol as a preliminary evaluation step, particularly for exploring completely novel and untested ideas.
+
+However, the protocol could not explain the observed trend whereby native subjects seem to prefer the proposed methodology.
+To better address these questions, it would be important to design a more accurate analysis methodology to expose crucial difference between systems in a more qualitative fashion.
+A better evaluation protocol for intonation modeling might involve providing more contextual information for the stimuli, recording the subjects' reactions upon listening to stimuli, and asking subjects more detailed questions about why they prefer certain stimuli over others, etc.
+

@@ -1,0 +1,25 @@
+The prosodic dynamics are calculated from static values sampled from interpolated \ac{F0} contours by means of the following formula: 
+
+\begin{equation}
+    n_{t} = \left\{
+    \begin{array}{ll}
+      0 & t=0 \\
+      
+      [s*(\log_{2}(f_{t})-\log_{2}(2^{\frac{[\log_{2}(f_{t-1})]}{s}}))] & t=1 \\
+
+      [s*(\log_{2}(f_{t})-\log_{2}(f^*_{t-1}))] & t>1 \\
+
+    \end{array}
+    \right.
+\label{eq:frequency-equation2}
+\end{equation}
+
+
+where:
+\begin{conditions}
+ $t$ & time index \\
+ $s$  &  number of steps within each octave \\
+ $f_{t}$ & \ac{F0} value at the current time step\\
+ $n_{t}$  &  number of steps away from $f_{t-1}$ \\
+ $f^*_{t-1}$ & the \ac{F0} value obtained by moving $n_{t-1}$ steps away from $f_{t-2}$
+\end{conditions}

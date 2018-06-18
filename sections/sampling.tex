@@ -1,0 +1,131 @@
+% !TEX root = ../main.tex
+
+
+\chapter{Feature Extraction}\label{chap:feature-extraction}
+
+ In this section, I will describe how feature extraction is carried out in the proposed methodology.
+ 
+This section is divided into three parts.
+In the first part, I will discuss the two most commonly used approaches for sampling speech data, and I will present the adaptive sampling method implemented for my methodology.
+In the second part, I will provide a description of the textual information that I decided to include and justification for each chosen linguistic feature.
+In the third part, I will present the technique I used for the dynamic encoding of the interpolated \ac{F0}.
+
+\section{Sampling}
+
+One major preliminary step in approaching the problem of \ac{F0} modeling is to decide how the pitch information and the corresponding linguistic labels should be sampled.
+Most \ac{F0} estimation tools produce as their output a sequence of \ac{F0} values sampled at a constant rate.
+Typically, for most \ac{TTS} systems, acoustic information is sampled at a 5~ms time interval.
+However, different researchers might decide to use this data in very different ways depending on how they approach the problem.
+
+In this section, I will present the sampling approach used in my implementation.
+The proposed sampling scheme is based on the selection of a support level and a default time interval. 
+The size of the interval is adapted based on the duration of the support level.
+This approach is a hybrid of two common sampling approaches: frame-by-frame and anchor-point methods.
+The advantages and disadvantages of these methods are discussed and used as motivation for the adaptive sampling rate method presented here.
+
+\subsection{Frame-by-Frame Approach}
+
+Under this approach, the data is sampled at a fixed time interval, typically at a 5~ms time interval.
+This is what we typically find in \ac{TTS} systems such as Merlin \citep{Wu2016Merlin}, where the \ac{F0} and other acoustic features are modeled jointly in a frame-by-frame fashion. 
+
+The main advantage of frame-by-frame approaches is that they are very convenient and they make the least assumptions about the data. 
+However, it is also needlessly wasteful, as we would have to make a prediction for every single frame.
+This can be problematic, if we wish to include very rich input features such as word embeddings.
+Under this approach, using word embeddings with hundreds (if not thousands) of inputs per frame could become prohibitively expensive.
+
+As a lot of the information contained in the \ac{F0} contour is redundant, most of it can be discarded, as it is easily reconstructed from partial or parametrized contours by means of interpolation.
+Not only does this allow for larger inputs, but having fewer points to predict also means faster and more efficient training, especially for longer sequences.
+
+Despite the recent introduction of \acp{RNN}, which allow for much better modeling of long sequences, long distance dependencies still remain a tricky aspect to model, because of the limited time memory that these architectures offers.
+Reducing the number of intonational events that we want to predict per utterance will make the learning process much easier.
+
+However, we cannot simply compress the data by naively downsampling the output produced by \ac{F0} estimation tools. 
+The main problem with a lower fixed sampling rate is that the sampled points would be located in linguistically irrelevant positions.
+For instance some points might be located very close to the syllable boundaries, sometimes far from them. 
+Sometimes certain syllables might be skipped entirely because they are too short.
+Notice for instance in \autoref{fig:fixed-anchor}, how a fixed sampling rate causes the sampled \ac{F0} to be distributed erratically with respect to linguistic segments.
+
+
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/fixed-anchor.pgf}}
+\caption[Fixed sampling rate]{Location of extraction points in an \ac{F0} contour at a fixed 10~Hz sampling rate.}
+\label{fig:fixed-anchor}
+\end{figure}
+
+
+
+\subsection{Fixed Anchor-Point Approaches}
+
+A commonly adopted solution to the problems that arises from the adoption of low fixed sampling rates is to use so-called ``anchor points'', i.e., linguistically relevant positions within the utterance \citep[e.g.,][]{Santen1997Modeling}.
+One might, for example, choose to sample \ac{F0} measurements at the start, center, and end of each syllable.
+
+The advantage of this approach is that the contour can be represented into a much more compact format, which makes training a lot easier.
+Under this approach we also make sure that we have some information about each and every instance of the chosen support level (usually  the syllable).
+
+Unlike the frame-by-frame approach, this approach has to make a number of assumptions about pitch and its perception.
+The first assumption that we have to make is that phenomena that are lost as a consequence of the downsampling process are not that important and that reconstructed contours are still accepted by humans as natural.
+Additionally, we have to assume that the timing of prosodic events corresponds to linguistic units such as syllables or syllable sub-units, which might not always be the case for all natural languages.
+An additional assumption that we have to make if we simply use the same number of anchor points per linguistic segments is that duration has no bearing on the shape of a pitch template (unless of course duration is explicitly provided as an input feature to the model).
+Under this assumption, we might fail to account for physiological constraints about the vocal tract, such as how fast pitch rises or falls can be produced.
+
+One disadvantage illustrated by using the same number of anchor points per syllable is illustrated by \autoref{fig:low-anchor}.
+As we can see, with a vanilla implementation of the anchor-point approach we are unable to use more data points for longer syllables where we might observe more complex patterns.
+
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/low-anchor.pgf}}
+\caption[3 anchor-point sampling]{Location of extraction points in an \ac{F0} contour with 3 anchor points.}
+\label{fig:low-anchor}
+\end{figure}
+
+
+By the same token, if we want to increase the number of anchor points to capture more complex behaviors in longer syllables, as it was done in \autoref{fig:high-anchor}, we end up with too many points in shorter syllables, where contours are less complex.
+
+
+\begin{figure}[!h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/high-anchor.pgf}}
+\caption[7 anchor-point sampling]{Location of extraction points in an \ac{F0} contour with 7 anchor points.}
+\label{fig:high-anchor}
+\end{figure}
+
+
+\subsection{Adaptive Sampling Rate} \label{subsec:adaptive-sampling-rate}
+
+
+As previously mentioned, frame-by-frame sampling rates have the advantage of making fewer assumptions about the data and are more conveniently implemented.
+However, including rich inputs such as word embeddings is prohibitively expensive.
+On the other hand, anchor points can provide us with a more consistent number of points across linguistic segments, but we cannot allocate more anchor points for longer segments.
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/adapt-anchor.pgf}}
+\caption[Adaptive sampling]{Location of extraction points in an \ac{F0} contour with an adaptive sampling rate.}
+\label{fig:adapt-anchor}
+\end{figure}
+
+Given the various advantages and disadvantages of both approaches, in my methodology, I decided to adopt a hybrid of both.
+This is implemented by first selecting an appropriate linguistic level for interval subdivision (e.g., the syllable level) and a time interval as the default sampling rate (e.g., 0.1~s).
+The default sampling rate was determined heuristically, by trying out many different values and plotting the the original contours overlaid with vertical lines representing the sampling sites.
+For each syllable, the sampling rate is adapted, based on the default sampling rate and the duration of the syllable, based on \autoref{dur-equation}.
+
+\begin{equation}
+sr_{s} = \frac{dur_{s}}{[{\frac{dur_{s}}{dsr}}]}
+\label{dur-equation}
+\end{equation}
+where:
+\begin{conditions}
+ sr    &  sampling rate for syllable \textit{s} \\
+ dur  &  duration of syllable \textit{s}\\
+ dsr  &  default sampling rate
+\end{conditions}
+
+
+As we can observe in \autoref{fig:adapt-anchor}, the proposed adaptive sampling rate produces points of varying distance across syllables. 
+However, less so than a purely anchor-point-driven approach. 
+At the same time, we are able to allocate more sample points to longer syllables, which is the main advantage of the other approach, since we are not limited by a fixed number of anchor points. 
+
+

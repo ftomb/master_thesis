@@ -1,0 +1,38 @@
+% !TEX root = ../main.tex
+
+
+\chapter*{Introduction}\label{chap:introduction}
+
+Over the last decade, \ac{TTS} technology has advanced by leaps and bounds. 
+This is especially true for \ac{SPSS}, one the most widely used \ac{TTS} paradigms.
+The main reason for its popularity is its extreme flexibility, which makes it particularly attractive for research.
+
+Although \ac{SPSS} has reached high levels of intelligibility, one thorny and long-standing issue is the modeling of prosody.
+Prosody is a complex speech phenomenon that pertains to the suprasegmental properties of speech, i.e., properties beyond single sounds.
+Even though there is no agreed-upon set of prosodic variables, the classical acoustic parameters describing prosody are: \ac{F0} (responsible for intonation), duration (responsible for absolute and relative duration of units), intensity (responsible for energy-related features such as stress) and spectral characteristics (responsible for voice quality).
+
+As systems are getting better at modeling segmental features, their inadequacies in modeling suprasegmental features are becoming increasingly apparent.
+This is especially true with regard to intonation.
+Even though current approaches can produce fairly natural and intelligible speech, their intonation tends to be rather bland and monotonous, which is unsuitable for many \ac{TTS} applications.
+
+Despite the crucial role that intonation plays in making synthetic speech sound more natural and human-like, for the longest time the modeling of intonation has largely been subordinated to that of segmental features.
+This is perhaps due, on the one hand, to the higher salience of segmental features and, on the other, to the more elusive and generally intractable nature of intonation.
+
+The reason why modeling intonation is such a hard task is due to the fact that it carries out a very large number of complex and highly-entangled linguistic, para-linguistic and extra-linguistic functions, whose relationship to the the source text is anything but trivial.
+
+Nevertheless, intonation remains a rather pressing research topic, that is bound to become more critical in the coming years, especially as the demand for \ac{TTS} applications such as dialog systems, virtual agents, and personal assistants increases. 
+For these applications, it is desirable to generate speech that is not just intelligible, but also affective and natural enough that users forget they are interacting with a computer.
+In these domains, intonation is still very much considered an open question.
+
+For these reasons, in my thesis I will be focusing on the modeling of intonation.
+Within the scope of this proposal, intonation modeling is used to refer to the problem of generating a sequence of \ac{F0} values given a text sequence. 
+Here, other important prosodic phenomena that accompany intonation such as duration, loudness, timbre, etc., will be ignored or assumed to be known.
+
+This proposal is structured as follows.
+In \autoref{chap:scope}, I will offer a brief overview of \ac{TTS} technology and intonation models.
+In \autoref{chap:feature-extraction}, \autoref{chap:intonation-modeling} and \autoref{chap:segmental-synthesizer}, I will propose, motivate, and justify a deep learning methodology for the modeling of intonation in the context of \ac{SPSS}.
+In \autoref{chap:feature-extraction}, I will discuss how feature extraction is carried out in the proposed methodology.
+In \autoref{chap:intonation-modeling}, I will present a dedicated \ac{DNN} model for the modeling of intonation.
+In \autoref{chap:segmental-synthesizer}, I will present a \ac{DNN} model for the synthesis of segmental features from a linguistic specification and an \ac{F0} contour.
+In \autoref{chap:evaluation}, the proposed methodology is evaluated and compared to a state-of-the-art parametric \ac{TTS} system.
+Finally, in the last chapter I will offer my own conclusions and perspectives for future research.

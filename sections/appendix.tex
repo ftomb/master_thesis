@@ -1,0 +1,529 @@
+% !TEX root = ../main.tex
+
+\appendix
+
+\chapter{Intonation Model Label Description}\label{chap:appendix-a}
+
+The full set of input and output labels used for the training of the intonation model are reported in table \ref{f0-labels-table}.
+
+\begin{longtable}[c]{llp{0.6\linewidth}}
+\toprule
+
+{\bf Labels } & {\bf Description }& {\bf   }\\
+\midrule
+\multirow{3}{0.18\linewidth}{{\bf Syllable Boundary}}
+          & {\bf Size:} 
+                                & 3 \\
+          & {\bf Details:} 
+                                & If the sampled point is between two syllables \verb|1|, \verb|0| otherwise, \verb|<unk>| when unknown. \\
+          & {\bf Set:} 
+                                & \verb|<unk>, 0, 1| \\ 
+          \midrule
+          
+\multirow{3}{0.18\linewidth}{{\bf Word Boundary}}
+          & {\bf Size:} 
+                                & 3 \\
+          & {\bf Details:} 
+                                & If the sampled point is between two words \verb|1|, \verb|0| otherwise, \verb|<unk>| when unknown. \\
+          & {\bf Set:} 
+                                & \verb|<unk>, 0, 1| \\ 
+          \midrule
+
+\multirow{3}{0.18\linewidth}{{\bf Syllable stress}}
+          & {\bf Size:} 
+                                & 5 \\
+          & {\bf Details:} 
+                                & \verb|0| for unstressed, \verb|1| for main stress, \verb|2| for secondary stress, \verb|<sil>| for non-speech, , \verb|<unk>| when unknown \\
+          & {\bf Set:} 
+                                & \verb|<unk>, <sil>, 0, 1, 2| \\ 
+          \midrule
+
+\multirow{3}{0.18\linewidth}{{\bf Onset and Rhyme}}
+          & {\bf Size:} 
+                                & 4 \\
+          & {\bf Details:} 
+                                & \verb|<sil>| for non-speech, , \verb|<unk>| when unknown, \verb|O| is the onset of the syllable, \verb|R| is the rhyme of the syllable, i.e., nucleus+coda \\
+          & {\bf Set:} 
+                                & \verb|<unk>, <sil>, O, R| \\ 
+          \midrule\\ \\ 
+
+\midrule
+\multirow{3}{0.18\linewidth}{{\bf \ac{POS} tags}}
+          & {\bf Size:} 
+                                & 66 \\
+          & {\bf Details:} 
+                                & \verb|<sil>| for non-speech, \verb|<unk>| when unknown. The other labels come from the nltk \ac{POS}-tagger, and for words such as ``don't'' or ``I'm'' the two POSs predicted by the tagger were spliced together. \\
+          & {\bf Set:} 
+                                & \verb|<unk>|, \verb|<sil>|, \verb|NN|, \verb|DT|, \verb|VBD|, \verb|IN|, \verb|PRP|, \verb|JJ|, \verb|RB|, \verb|NNS|, \verb|VB|, \verb|CC|, \verb|TO|, \verb|PRP\$|, \verb|VBN|, \verb|VBP|, \verb|VBG|, \verb|VBZ|, \verb|CD|, \verb| MD|, \verb|RP|, \verb|WRB|, \verb|WP|, \verb|NNPOS|, \verb|JJR|, \verb|PRPVBZ|, \verb|VBDRB|, \verb|EX|, \verb|JJS|, \verb|MDRB|, \verb|PRPVBP|, \verb|PRPMD|, \verb|VBPRB|, \verb|RBR|, \verb|NNMD|, \verb|WDT|, \verb|PDT|, \verb|UH|, \verb|WPVBZ|, \verb|JJMD|, \verb|EXVBZ|, \verb|DTVBZ|, \verb|VBMD|, \verb|NNVBP|, \verb|RBS|, \verb|VBZRB|, \verb|WRBPOS|, \verb|NNP|, \verb|WDTVBZ|, \verb|FW|, \verb|JJVBP|, \verb|VBPPOS|, \verb|VBVBP|, \verb|RBVBZ|, \verb|WDTPOS|, \verb|WP\$|, \verb|VBZVBP|, \verb|JJPOS|, \verb|NNSPOS|, \verb|WRBVBZ|, \verb|VBPOS|, \verb|VBPVBP|, \verb|VBPMD|, \verb|EXMD|, \verb|VBZMD|, \verb|RBPOS|\\ 
+          \midrule
+
+
+\multirow{3}{0.18\linewidth}{{\bf Punctuation Before Word}}
+          & {\bf Size:} 
+                                & 55 \\
+          & {\bf Details:} 
+                                & \textlangle{}sil\textrangle{} for non-speech, '\textlangle{}unk\textrangle{}' when unknown. The labels are created by taking whatever punctuation characters are between the current and the previous word. "start" and "end" markers were added at the beginning and end of each utterance. Here the punctuation symbols are separated by the semicolon symbol. \\
+          & {\bf Set:} 
+                                & \verb|<unk>| ; \verb|<sil>| ; \verb|_| ;  \verb|,| ; \verb|start| ; \verb|.end| ; \verb|start"| ; \verb|,"| ; \verb|.| ; \verb|!"| ; \verb|."| ; \verb|end| ; \verb|."end| ; \verb|?"| ; \verb|!end| ; \verb|--| ; \verb|!"end| ; \verb|!| ; \verb|?"end| ; \verb|?end| ; \verb|...| ; \verb|...end| ; \verb|?| ; \verb|'| ; \verb|",| ; \verb|"| ; \verb|(| ; \verb|:| ; \verb|..."| ; \verb|start...| ; \verb|..."end| ; \verb|,end| ; \verb|)| ; \verb|"end| ; \verb|?",| ; \verb|).end| ; \verb|:"| ; \verb|!",| ; \verb|),| ; \verb|".end| ; \verb|start(| ; \verb|start"...| ; \verb|.""| ; \verb|)end| ; \verb|.)| ; \verb|"(| ; \verb|!".| ; \verb|?".end| ; \verb|-"end| ; \verb|start'| ; \verb|-end| ; \verb|.!end| ; \verb|!",end| ; \verb|,"end| \\ 
+          \midrule
+
+\multirow{3}{0.18\linewidth}{{\bf Punctuation After Word}}
+          & {\bf Size:} 
+                                & Same as ``Punctuation Before Word'' \\
+          & {\bf Details:} 
+                                & \textlangle{}sil\textrangle{} for non-speech, '\textlangle{}unk\textrangle{}' when unknown. The labels are created by taking whatever punctuation characters are between the current and the subsequent word. "start" and "end" markers were added at the beginning and end of each utterance. Here the punctuation symbols are separated by the semicolon symbol. \\
+          & {\bf Set:} 
+                                & Same as ``Punctuation Before Word'' \\ 
+            \midrule
+
+
+\multirow{3}{0.18\linewidth}{{\bf Lemmata}}
+          & {\bf Size:} 
+                                & See Appendix \ref{chap:appendix-b}  \\
+          & {\bf Details:} 
+                                & See Appendix \ref{chap:appendix-b} \\
+          & {\bf Set:} 
+                                & See Appendix \ref{chap:appendix-b} \\ 
+            \midrule
+
+\multirow{3}{0.18\linewidth}{{\bf Sign}}
+          & {\bf Size:} 
+                                & 3 \\
+          & {\bf Details:} 
+                                & Direction of pitch change \\
+          & {\bf Set:} 
+                                & \verb|-1, 0, 1| \\ 
+                                \midrule
+
+\multirow{3}{0.18\linewidth}{{\bf Magnitude}}
+          & {\bf Size:} 
+                                & 11 \\
+          & {\bf Details:} 
+                                & Amount of pitch change \\
+          & {\bf Set:} 
+                                & \verb|0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55| \\ 
+
+
+\bottomrule
+\caption{Intonation model label description.}
+\label{f0-labels-table}
+\end{longtable}
+
+
+\chapter{Lemmata Label Description}\label{chap:appendix-b}
+
+
+The full set of lemmata labels amounts to 1937 distinct labels.
+The \textlangle{}sil\textrangle{} label is for non-speech, the '\textlangle{}unk\textrangle{}' label for unknown words. The lemmata labels come from lemmatized version of the text tokens. To avoid useless frequent words such as character names, we filter out the lemmata that are not found in frequency lists of English based on much larger corpora\footnote{The frequency list used to filter out words is derived from the The British National Corpus (\url{http://www.natcorp.ox.ac.uk/using/index.xml?ID=freq}).}. The full set of lemmata used in the training of the intonation model is the following:
+\newline
+
+
+ 
+
+ \input{word-list.tex}
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+
+\chapter{Segmental Synthesizer Label Description}\label{chap:appendix-c}
+
+\begin{longtable}[c]{llp{0.6\linewidth}}
+\toprule
+
+{\bf Labels } & {\bf Description }& {\bf   }\\
+\midrule
+\multirow{3}{0.18\linewidth}{{\bf Current Phone}}
+          & {\bf Size:} 
+                                & 45 \\
+          & {\bf Details:} 
+                                & The phone currently observed. The phone set is based on the \ac{OALD}\footnote{ \url{http://www.cstr.ed.ac.uk/downloads/festival/2.4/festlex_OALD.tar.gz}}, augmented with an extra symbol for silence.  \\
+          & {\bf Set:} 
+                                & \verb|@|, \verb|@@|, \verb|a|, \verb|aa|, \verb|ai|, \verb|au|, \verb|b|, \verb|ch|, \verb|d|, \verb|dh|, \verb|e|, \verb|e@|, \verb|ei|, \verb|f|, \verb|g|, \verb|h|, \verb|i|, \verb|i@|, \verb|ii|, \verb|jh|, \verb|k|, \verb|l|, \verb|m|, \verb|n|, \verb|ng|, \verb|o|, \verb|oi|, \verb|oo|, \verb|ou|, \verb|p|, \verb|r|, \verb|s|, \verb|sh|, \verb|sil|, \verb|t|, \verb|th|, \verb|u|, \verb|u@|, \verb|uh|, \verb|uu|, \verb|v|, \verb|w|, \verb|y|, \verb|z|, \verb|zh|\\ 
+          \midrule
+          
+\multirow{3}{0.18\linewidth}{{\bf Previous Phone}}
+          & {\bf Size:} 
+                                & Same as ``Current Phone'' \\
+          & {\bf Details:} 
+                                & The phone before the currently observed one. \\
+          & {\bf Set:} 
+                                & Same as ``Current Phone'' \\
+          \midrule
+
+\multirow{3}{0.18\linewidth}{{\bf Before Previous Phone}}
+          & {\bf Size:} 
+                                & Same as ``Current Phone'' \\
+          & {\bf Details:} 
+                                & The phone before the previously observed one. \\
+          & {\bf Set:} 
+                                & Same as ``Current Phone'' \\
+          \midrule
+
+\multirow{3}{0.18\linewidth}{{\bf Next Phone}}
+          & {\bf Size:} 
+                                & Same as ``Current Phone'' \\
+          & {\bf Details:} 
+                                & The phone after the currently observed one. \\
+          & {\bf Set:} 
+                                & Same as ``Current Phone'' \\
+          \midrule
+&& \\
+&& \\
+\midrule
+\multirow{3}{0.18\linewidth}{{\bf After Next Phone}}
+          & {\bf Size:} 
+                                & Same as ``Current Phone'' \\
+          & {\bf Details:} 
+                                & The phone after the subsequent phone. \\
+          & {\bf Set:} 
+                                & Same as ``Current Phone'' \\
+          \midrule
+
+
+\multirow{3}{0.18\linewidth}{{\bf Phone Duration}}
+          & {\bf Size:} 
+                                & 1 \\
+          & {\bf Details:} 
+                                & Number of frames for each phone divided by 100 to make it fit approx. within a 0-1 range.\\ 
+          & {\bf Set:} 
+                                & n/a\\ 
+          \midrule
+
+
+\multirow{3}{0.18\linewidth}{{\bf Log_2(\ac{F0})}}
+          & {\bf Size:} 
+                                & 1 \\
+          & {\bf Details:} 
+                                & Interpolated $log_2(F_0)$, divided by 10 to make it fit approx. within 0-1 range.\\ 
+          & {\bf Set:} 
+                                & n/a\\ 
+          \midrule
+
+
+\multirow{3}{0.18\linewidth}{{\bf \ac{VUV}}}
+          & {\bf Size:} 
+                                & 2 \\
+          & {\bf Details:} 
+                                & \verb|1| for voiced, \verb|0| for otherwise.\\
+          & {\bf Set:} 
+                                &  \verb|0, 1|\\ 
+          \midrule
+
+
+\multirow{3}{0.18\linewidth}{{\bf \ac{BAP}}}
+          & {\bf Size:} 
+                                & 6 \\
+          & {\bf Details:} 
+                                & 5 \ac{BAP} coefficients and corresponding gain\\
+          & {\bf Set:} 
+                                &  n/a\\
+          \midrule
+
+
+
+\multirow{3}{0.18\linewidth}{{\bf \ac{MGC}}}
+          & {\bf Size:} 
+                                & 61 \\
+          & {\bf Details:} 
+                                & 60 \ac{MGC} coefficients and corresponding gain\\
+          & {\bf Set:} 
+                                &  n/a\\
+
+\bottomrule
+\caption{Segmental synthesizer label description.}
+\label{seg-labels-table}
+\end{longtable}
+\clearpage
+
+
+
+\chapter{Evalutation Results}\label{sec:appendix-d}
+
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+
+     & {\bf P. vs. M.} & {\bf P. vs. O.} & {\bf M. vs. O.} \\
+     \midrule
+     
+    {\bf Proposed} & 93 & 41 &  \\  
+
+    {\bf Merlin} & 69 &  & 34 \\     
+    
+    {\bf Original} & & 117 & 131 \\  
+    \bottomrule
+    \end{tabular}
+  \caption{Native speakers evaluation results.}
+  \label{tab:native-eval-result}
+\end{table}
+
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+
+     & {\bf P. vs. M.} & {\bf P. vs. O.} & {\bf M. vs. O.} \\
+     \midrule
+     
+    {\bf Proposed} & 302 & 196 &  \\  
+
+    {\bf Merlin} & 279 &  & 172 \\     
+    
+    {\bf Original} & & 395 & 411 \\  
+    \bottomrule
+    
+    \end{tabular}
+  \caption{Non-native speakers evaluation results.}
+  \label{tab:non-native-eval-result}
+\end{table}
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+
+     & {\bf P. vs. M.} & {\bf P. vs. O.} & {\bf M. vs. O.} \\
+     \midrule
+     
+    {\bf Proposed} & 57.4\% & 25.9\% &  \\  
+
+    {\bf Merlin} & 42.6\% &  & 20.6\% \\     
+    
+    {\bf Original} & & 74.1\% & 79.4\% \\  
+    \bottomrule
+    \end{tabular}
+  \caption{Native speakers evaluation results (in percentage).}
+  \label{tab:perc-native-eval-result}
+\end{table}
+
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+
+     & {\bf P. vs. M.} & {\bf P. vs. O.} & {\bf M. vs. O.} \\
+     \midrule
+     
+    {\bf Proposed} & 52\% & 33.2\% &  \\  
+
+    {\bf Merlin} & 48\% &  & 29.5\% \\     
+    
+    {\bf Original} & & 66.8\% & 70.5\% \\  
+    \bottomrule
+    
+    \end{tabular}
+  \caption{Non-native speakers evaluation results (in percentage).}
+  \label{tab:perc-non-native-eval-result}
+\end{table}
+
+
+\chapter{The Implementation}
+
+The code is implemented in Python 3 and is organized into four repositories: two for the intonation model (one for training and one for inference) and two for the segmental synthesizer (one for training and one for inference).
+The choice of splitting the project into smaller sub-projects was made for the sake of modularity.
+For instance, some users might only be interested in the intonation model, whereas others might only be interested in the implementation of the segmental synthesizer to carry out their on research on prosody.
+All four sub-projects are built by means of open-source build automation system Gradle\footnote{\url{https://gradle.org/}}.
+
+\section{Intonation Model Implementation}
+
+The implementation of the intonation model is hosted at the following links: \url{https://github.com/ftomb/intonation_model_training} and \url{https://github.com/ftomb/intonation_model_inference}.
+The first link is for the training of the model, the second to run inferences.
+
+To run the implementation, you will first need the following external installed tools:
+
+\begin{itemize}[noitemsep]
+    \item \verb|Java|
+    \item \verb|SoX|\footnote{\url{http://sox.sourceforge.net/}}
+\end{itemize}
+
+In addition, you will need the following Python packages:
+
+\begin{itemize}[noitemsep]
+    \item \verb|tgt|
+    \item \verb|numpy|
+    \item \verb|nltk|\footnote{In particular you need to make sure have the \emph{wordNetLemmatizer} installed (\url{http://www.nltk.org/_modules/nltk/stem/wordnet.html}), as well as the NLTK \emph{WordNet} corpus downloaded}
+    \item \verb|scipy|
+    \item \verb|tensorflow|\footnote{\url{https://www.tensorflow.org/}} (1.2 and above)
+    \item \verb|pyworld|
+    \item \verb|pysptk|
+\end{itemize}
+
+To train the model, you need to place the following three folders into the (\verb|/src|) directory of the first repository (\url{https://github.com/ftomb/intonation_model_training}):
+
+\begin{itemize}[noitemsep]
+    \item \verb|txt| (text files)
+    \item \verb|wav| (wave files)
+    \item \verb|textgrid| (textgrid files)
+\end{itemize}
+
+
+The textgrid files must contain two tiers: one for the words and one for the phones.
+The name of the word tier must contain the string  ``words'' and, likewise, the name of the phone tier must contain the string ``phones''.
+If you strip the phones of the stress information for the alignment phase, make sure you add the stress information back into the phone tier.
+
+For the syllabifier to work, the phones in the textgrids much be based on the phone set used in the \ac{OALD}\footnote{ \url{http://www.cstr.ed.ac.uk/downloads/festival/2.4/festlex_OALD.tar.gz}} phone set.
+It is also possible to use other phone sets such as the one the \ac{CMU} Pronunciation Dictionary is based on. 
+
+To use the \ac{CMU} set, you will have to modify the \verb|phone_set_path| variable in the \verb|build.gradle| script to point to the \ac{CMU} file provided in the \verb|/src| directory.
+To use different phone sets or difference languages, you will have to place a \verb|json| file similar to the ones provided in the \verb|/src| directory, in which you provide the consonant, vowel and onset sets of the language.
+
+Next, you have to provide the number of epochs you want the model to train for.
+The value can be adjusted by modifying the \verb|n_epochs| variable in the \verb|build.gradle| script.
+For my implementation (3h and 57mins of speech), 20 epochs were sufficient.
+
+To start training the model, run the following command, where \verb|[number_epochs]| is replaced by the number of epochs you want to train the model for:
+
+\begin{verbatim}
+
+ ./gradlew synthesize_wav_[number_epochs]
+
+\end{verbatim}
+
+This command will automatically train a model for the specified number of epochs.
+At each epoch a model will be saved.
+The model is marked by a number that corresponds to the epoch it was produced at.
+
+Then, for each trained model, the command will use a vocoder to synthesize the entire validation set using the acoustic features from the original recordings.
+As the synthesis of segmental features by means of \ac{DNN} is computationally expensive, for this validation stage the vocoder is used instead.
+After the synthesis process is complete, you can listen to waveforms produced at each epoch, so that you can pick the model you deem most accurate.
+Each waveform is marked at the end by the model number it was synthesized from.
+The wave files will be generated inside the \verb|/build/33_synth_wav| folder
+
+Finally, you can collected the files you will need at inference time.
+These include:
+
+\begin{itemize}[noitemsep]
+    \item \verb|/build/18_NN_dictionaries/sign_label_dictionary.json| 
+    \item \verb|/build/18_NN_dictionaries/magn_label_dictionary.json|
+    \item \verb|/build/20_merged_dictionaries/inference_dictionaries.json|
+    \item \verb|/build/28_frozen_models/frozen_model_[chosen_number]|
+\end{itemize}
+
+To run the inference, you need to place these files into a folder named \verb|model|.
+You also need to rename the \verb|frozen_model_[chosen_number]| to \verb|frozen_model| (i.e., remove the epoch number marking it at the end).
+The \verb|model| folder must then be placed inside the (\verb|/src|) directory of the second repository (\url{https://github.com/ftomb/intonation_model_inference}).
+In addition you have to place the following two folders with their corresponding files inside the \verb|/src| folder:
+
+\begin{itemize}[noitemsep]
+    \item \verb|txt| (text files)
+    \item \verb|textgrid| (textgrid files)
+\end{itemize}
+
+Similarly to the training process, if you used a different phone set, you need to modify the \verb|phone_set_path| variable in the \verb|build.gradle| script to point to the file provided in the \verb|/src| directory.
+
+To start the inference, run the following command:
+
+\begin{verbatim}
+ ./gradlew convert_to_hertz
+\end{verbatim}
+
+This command will automatically generate \ac{F0} contours for the provided data.
+The \ac{F0} files will be generated inside the \verb|/build/32_synth_f0s| folder.
+
+
+
+
+
+
+
+
+
+\section{Segmental Synthesizer Implementation}
+
+The implementation of the intonation model is hosted at the following links: \url{https://github.com/ftomb/segmental_synthesizer_training} and \url{https://github.com/ftomb/segmental_synthesizer_inference}.
+The first link is for the training of the model, the second to run inferences.
+
+To run the implementation, you will first need the following external installed tools:
+
+\begin{itemize}[noitemsep]
+    \item \verb|Java|
+    \item \verb|SoX|\footnote{\url{http://sox.sourceforge.net/}}
+\end{itemize}
+
+In addition, you will need the following Python packages:
+
+\begin{itemize}[noitemsep]
+    \item \verb|tgt|
+    \item \verb|numpy|
+    \item \verb|tensorflow|\footnote{\url{https://www.tensorflow.org/}} (1.2 and above)
+    \item \verb|pyworld|
+    \item \verb|pysptk|
+\end{itemize}
+
+
+To train the model, you need to place the following three folders into the (\verb|/src|) directory of the first repository (\url{https://github.com/ftomb/segmental_synthesizer_training}):
+
+\begin{itemize}[noitemsep]
+    \item \verb|wav| (wave files)
+    \item \verb|textgrid| (textgrid files)
+\end{itemize}
+
+
+The textgrid files must contain phone tier.
+The name of the phone tier must contain the string ``phones''.
+
+Next, you have to provide the number of epochs you want the model to train for.
+The value can be adjusted by modifying the \verb|n_epochs| variable in the \verb|build.gradle| script.
+For my implementation (3h and 57mins of speech), 25 epochs were sufficient.
+
+To start training the model, run the following command, where \verb|[number_epochs]| is replaced by the number of epochs you want to train the model for:
+
+\begin{verbatim}
+
+ ./gradlew synthesize_[number_epochs]
+
+\end{verbatim}
+
+This command will automatically train a model for the specified number of epochs.
+At each epoch a model will be saved.
+The model is marked by a number that corresponds to the epoch it was produced at.
+
+Then, for each trained model, the command will use the \ac{DNN} model to synthesize the entire validation set.
+After the synthesis process is complete, you can listen to waveforms produced at each epoch, so that you can pick the model you deem most accurate.
+Each waveform is marked at the end by the model number it was synthesized from.
+
+Finally, you can collected the files you will need at inference time.
+These include:
+
+\begin{itemize}[noitemsep]
+    \item \verb|/build/05_phone_dictionary/phone_dictionary.dict|
+    \item \verb|/build/07_input_mean_std/input_mean_std.json| 
+    \item \verb|/build/08_output_mean_std/output_mean_std.json|
+    \item \verb|/build/13_frozen_models/frozen_model_[chosen_number]|
+\end{itemize}
+
+To run the inference, you need to place these files into a folder named \verb|model|.
+You also need to rename the \verb|frozen_model_[chosen_number]| to \verb|frozen_model| (i.e., remove the epoch number marking it at the end).
+The \verb|model| folder must then be placed inside the (\verb|/src|) directory of the second repository (\url{https://github.com/ftomb/segmental_synthesizer_inference}).
+In addition you have place the following folder inside \verb|/src|:
+
+\begin{itemize}[noitemsep]
+    \item \verb|textgrid| (textgrid files)
+\end{itemize}
+
+To start the inference, run the following command:
+
+\begin{verbatim}
+ ./gradlew synthesize
+\end{verbatim}
+
+This command will automatically generate wave files for the provided data.
+The wave files will be generated inside the \verb|/build/wav| folder.
+
+

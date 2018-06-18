@@ -1,0 +1,373 @@
+% !TEX root = ../main.tex
+
+\section{Intonation Labels}\label{sec:f0-encoding}
+
+In addition to selecting the appropriate linguistic labels as input, one must also generate intonation labels for the output, so as to provide supervision during the training of the model.
+All the previous work on intonation modeling discussed in \autoref{sec:intonation-models} focuses on a static description of the \ac{F0}, either as a value (e.g., log(\ac{F0}), wavelets, quantized \ac{F0}, etc.) or as a pattern (e.g., templates, splines, B-splines etc.).
+Here, I propose a dynamic approach, whereby contours are not encoded as a sequence of static values, but rather as a sequence of values representing the dynamic evolution of the contour through time.
+
+In order to achieve this, a new encoding scheme for the interpolated \ac{F0} has been devised.
+The encoding scheme is characterized by three key features: quantization, dynamism, and compression.
+Quantization is achieved by discretizing the frequency space into frequency levels.
+Pitch movements from one level to the next are encoded dynamically as sequences of pitch intervals, rather than sequences of static landing sites.
+Pitch intervals are compressed by representing intervals as the combination of two components: \emph{sign} and \emph{magnitude}.
+The sign represents the direction of pitch change, and the magnitude, the amount of change in such direction.
+The magnitude representation is further compressed by rounding magnitude values to their closest triangular number approximation.
+
+
+
+\subsection{Encoding}
+
+The prosodic dynamics are calculated from static values sampled from interpolated \ac{F0} contours\footnote{In my implementation, contours are estimated and interpolated by means of the software package Praat (\url{http://praat.org/}).} by means of the following recursive formula:
+
+
+
+\begin{equation}
+    f_{t} = \left\{
+    \begin{array}{ll}
+      2^{(n_{t}/s)} & t=0 \\
+      f_{t-1} * 2^{(n_{t}/s)} & t>0\\
+    \end{array}
+    \right.
+\label{eq:frequency-equation}
+\end{equation}
+
+where:
+\begin{conditions}
+ $t$ & time index \\
+ $s$  &  number of steps within each octave\\
+ $n_{t}$  &  number of steps away from $f_{t-1}$ \\
+ $f_{t}$    &  frequency of the \ac{F0} value $n_{t}$ steps away from  $f_{t-1}$
+\end{conditions}
+
+The formula automatically maps \ac{F0} values to an underlying pitch scale, where each octave contains $s$ equally sized steps (pitch levels).
+In my implementation, $s$ is set to 24 in order to have each frequency interval correspond to exactly 1/2 semitone of the standard western scale.
+At each time step $t$, we estimate $f_{t}$ to produce the closest approximation to the observed \ac{F0} value at time $t$.
+The $n_{t}$ value that produces the closest \ac{F0} approximation constitutes the dynamic information we want to store.
+
+As no values come before the first one, the estimation of $f_{t=0}$ is only needed to start the recursion for the subsequent $f_{t}$ values.
+Therefore $n_{t=0}$ does not represent a dynamic, but rather the position of $f_{t=0}$ within the underlying scale (i.e., how many steps away from the bottom of the pitch scale).
+As neither an upward nor a downward pitch movement takes place before the very first \ac{F0} value, $n_{t=0}$ is set to 0 after the recursion is complete.
+
+The dynamic information $n_{t}$ is separated into two components: the \emph{sign} of $n_{t}$ which gives the direction of change, and its \emph{magnitude}, which corresponds to the amount of change in such direction. The sign is encoded by using three values: $-1$ (falling), $0$ (level), and $1$ (rising).
+Magnitude values are rounded to their closest triangular number approximation, where triangular numbers are defined as follows:
+
+\begin{equation}
+T_{n} = \sum_{k=1}^{n} k = 1 + 2 + 3 + \cdots + n = \frac{n(n+1)}{2} = \binom{n+1}{2}
+\label{eq:triangular-numbers}
+\end{equation}
+where:
+\begin{conditions}
+T_{n}  &  $n$\textsuperscript{th} triangular number  \\
+\frac{n(n+1)}{2}   &  a binomial coefficient
+\end{conditions}
+
+
+
+\subsection{Decoding}
+
+At decoding time, we face the inverse problem.
+We have a sequence of signs and magnitudes.
+From these, we want to reconstruct a sequence of \ac{F0} values.
+
+To recover the pitch interval information encoded by $n_{t}$, sign and magnitude are multiplied.
+The dynamics are recursively applied (i.e., added) to a starting seed value.
+To initialize the recurrence, the seed is set to $0$.
+
+This process automatically produces static values mapping to the underlying pitch scale's levels.
+To convert these static pitch levels into their corresponding Hertz values, a pitch scale is generated with the following equation:
+
+\begin{equation}
+    f_{n} = 2^{(n/s)} 
+\label{eq:pitch-scale}
+\end{equation}
+
+where:
+\begin{conditions}
+ s  &  number of levels within each octave\\
+ n  &  scale level\\
+ f_{n}    & \ac{F0} value at the $n$\textsuperscript{th} level of the scale
+\end{conditions}
+
+As the frequency mapping scale does not contain any negative values, we shift the static values to be decoded until they are all positive. Then, we produce an initial \ac{F0} sequence by replacing each static value by its corresponding frequency generated by \autoref{eq:pitch-scale}. This sequence is then shifted to correspond to the speaker characteristics, using the following translation:
+
+\begin{equation}
+    \label{eq:XX}
+    f^*_{t} = f_{t} - \frac{1}{k}\sum_{t=0}^{k}f_{t} + \overline{f(s)}
+\end{equation}
+\begin{conditions}
+
+\overline{f(s)} & average \ac{F0} of speaker $s$\\
+t & time index\\
+f_{t} & \ac{F0} value at time $t$\\
+f^*_{t} & \ac{F0} value at time $t$ adapted to speaker $s$\\
+\end{conditions}
+
+
+
+\subsection{Quantization}
+
+One major characteristic of the encoding scheme I have presented is its quantizing effect on the encoded contour, which transforms continuous curves into sequences of discrete categorical data.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.4]{figures/quantization.pdf}
+    \caption[Example of a quantized contour]{Example of a quantized contour. The \ac{F0} contour is represented by a dashed line. The darker rectangles represent the corresponding quantized contour.}
+    \label{fig:quantization}
+\end{figure}
+
+From the perspective of learning, quantization has the effect of converting \ac{F0} modeling from a regression problem to a classification one.
+More specifically, under a quantized regime, a \ac{DNN} would not attempt to approximate an underlying function of the contours, but rather a function of the probabilities of the categorical symbols from which the observed contour is generated.
+
+This decision might seem rather odd at first, as most researchers usually choose to preserve the original continuous \ac{F0} values and try to model the underlying function of the contour.
+I decided against this approach because in my estimation it might restrict and flatten the possible contours that the model can output.
+This is due to the fact that, as the model tries to reconstruct the underlying function, it will interpolate and smooth it to fit the training data.
+This has the effect of producing an averaged-out version of the observation.
+
+In order to avoid this, I decided not to use numerical values and to replace them with categorical data describing quantized pitch jumps.
+As the categorical data represents clear pre-defined pitch movements and not static values, pitch values are not forced to fit into a smoothed function of the contour, but rather a function of the probabilities of the categorical symbols from which the static \ac{F0} contours are generated.
+This means that the model is less restricted with regard to how fast pitch values can change or how far up or down they can jump, because the weights of the network are not modeling the actual size of the output values, but rather probabilities of pre-defined pitch movements.
+
+The inclusion of quantization as a feature is also justified by the fact that \ac{F0} is limited to a specific frequency range (typically 85 to 180~Hz for males and 165 to 255~Hz for females) and that very small pitch variations (say, 100 and 100.02~Hz) are not that important in the context of \ac{TTS}, where reconstructed \ac{F0} contours often only approximate the original.
+This is for instance the main assumption underlying the IPO intonation model (see \autoref{sec:intonation-models} for more details), where contours are simplified to only preserve perceptually relevant prosodic features and where less important features such as micro-prosody are discarded.
+
+In my encoding scheme, quantization is achieved by the recursive application of \autoref{eq:frequency-equation}, which automatically maps the static \ac{F0} values to a quantized frequency space (i.e., a pitch scale).
+This equation is more commonly used to determine the frequency of notes of the equal-tempered western scale, i.e., a scale where each octave is divided into (twelve) equally-sized steps.
+In my implementation, the use of this formula was slightly different from its more common application, as it not used to directly partition the frequency space into levels, but rather to estimate the number of pitch levels separating one observed \ac{F0} and next.
+
+The choice of basing the encoding scheme on this particular scale is somewhat unconventional, as a more common choice in speech applications would be to utilize a mel scale.
+One reason behind this decision is the criticism surrounding the mel scale put forward by Donald D. Greenwood, a student of Stevens who worked on the mel scale experiments in 1956, who considers the scale to be biased by experimental flaws \citep{Greenwood1997Mel}.
+\autoref{eq:frequency-equation}, on the other hand, is purely based on well-understood physics of sound, as it was not determined empirically through the judgment of test subjects.
+
+Secondly, \autoref{eq:frequency-equation} is adopted for the sake of convenience, as it much easier to debug and check the sanity of the encoding when the encoded values have a clearly interpretable meaning.
+For instance, if we set $s$ to $24$, each interval in the scale corresponds exactly to half a semitone of the standard western scale.
+
+The idea of quantizing contours is not new in the context of \ac{F0} modeling. 
+In a recent proposal, quantization of \ac{F0} into static discrete values has been adopted as a way of avoiding \ac{F0} interpolation \citep{Wang2017RNN}.
+In particular, unspecified \ac{F0} values (e.g., in the presence of unvoiced segments) are encoded by a dedicated categorical symbol.
+This is argued to help avoid the influence of prosodic artifacts created during the interpolation process.
+From the perspective of dynamism, this approach is functionally very similar to calculating the log of \ac{F0} values: quantization simply linearizes the logarithmic relationship between \ac{F0} and pitch, with the difference that the static representations are discrete.
+
+However, in the methodology proposed here, quantization carries out a completely different function, as it is not used to avoid interpolation, but rather to provide a quantized space as the basis for the calculation of the dynamics.
+In the proposed approach, it is not possible to do away with interpolation, because each \ac{F0} label is defined in relation to the previous one, which means we can never leave the value of \ac{F0} unspecified, otherwise all the following \ac{F0} labels would become uninterpretable. 
+Therefore, here, quantization of the frequency domain is just an indirect way of ensuring that dynamics are also quantized and not real-valued.
+
+
+
+\subsection{Static vs.\ Dynamic}
+
+The main feature of the proposed encoding is its dynamism.
+This means that contours are not encoded as a sequence of static values, but rather as a sequence of values representing the dynamic evolution of the contour through time.
+
+This idea stems from a number of empirical and anecdotal observations that can be made about pitch both in the context of speech and music.
+In particular, the first observation is that raw \ac{F0} measurements assign an absolute value to each sample, and this value is completely meaningless when taken in isolation.
+It is only when \ac{F0} values are presented in context that they are endowed with prosodic meaning.
+
+This closely mirrors a similar observation that can be made about the musical domain.
+In music, notes, just like speech pitch points, are completely meaningless by themselves.
+As most musicians will know, what in fact constitutes a melody is not so much the sequence of notes, but the sequence of musical intervals, i.e., the relative change between one note and the next one. 
+This is especially apparent if we consider that most people who can sing a tune can do so without any knowledge about the name of the notes in the melody. 
+Melodies are also routinely transposed (i.e., pitch translation) to suit various voice ranges without changing the musical message of the tune.
+All this can be explained by the fact that, to a large extent, humans, with the possible exception of those born with perfect pitch, do not rely on absolute measurements to produce and process musical pitch.
+ 
+Similarly to what happens in music, humans do not know the exact \ac{F0} values they process or produce (again with the exception of those with perfect pitch) and yet, they are still able to correctly generate and interpret intonation patterns.
+Furthermore, speech patterns can also be transposed, i.e., when for instance they are uttered by people with different voice registers, without much change in the prosodic message (e.g., a question is interpreted as a question regardless of the shift of the contour along the frequency axis).
+
+We do not wish to take this analogy any further.
+Speech and music are after all two completely different domains and there is even some evidence that the processing of pitch information differs significantly for speech and music phenomena.
+\citet{Zatorre2012Musical} suggest that there are two pitch-related processing systems in the human brain: one for coarse and approximate pitch analysis, and one for precise and fine-grained analysis.
+Of these, it is suggested that the latter is unique to music.
+Because of the significant differences between the two domains, within the scope of the present discussion, the only loose analogy that we wish to take advantage of is the fact that the encoding of both musical or prosodic messages relies on a somewhat more relative dimension of frequency than an absolute one.
+
+The importance of a dynamic representation of the contour rests in its ability to capture a more abstract and compact representation, endowed with a higher degree of invariance.
+This property is illustrated by \autoref{fig:translation}.
+As it can be observed, the static values after the upward translation are completely different.
+On the other hand, a dynamic representation is completely invariant to frequency translation:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.38]{figures/translation.pdf}
+    \caption[Contour translation]{On the left side of the figure, a quantized \ac{F0} contour is shown. On the right side, the same quantized \ac{F0} contour has been shifted upwards by three steps. At the bottom of the figure, the corresponding static and dynamic values are reported.}
+    \label{fig:translation}
+\end{figure}
+
+As a side effect, the proposed encoding scheme is also naturally register-independent, as any upward or downward translation of the original contour would yield the same encoded sequence.
+This means it can be used to seamlessly model intonation of multi-speaker corpora without any additional normalization steps.
+
+
+\subsection{Sign Separation}
+
+One important feature of the proposed encoding scheme is the decomposition of pitch intervals into sign and magnitude information.
+The reason for the separation of these two types of information is justified first and foremost as a way of reducing the number of possible outcomes by half.
+
+One additional advantage of this separation is that we are also able to produce a representation that has a higher degree of invariance to compression and dilation, especially with regard to sign information.
+This property is illustrated by \autoref{fig:dilation}, where we can see how the sign of a contour remains unaltered, even after dilation has taken place.
+We can also observe that the magnitude, similarly to traditional static values, is more susceptible to noise.
+
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.35]{figures/dilation.pdf}
+    \caption[Contour dilation]{On the left side of the figure, a quantized \ac{F0} contour is shown. On the right side, the same quantized \ac{F0} contour has undergone dilation. At the bottom of the figure, the corresponding static and dynamic values are reported. The dynamic values are represented by the corresponding sign and magnitude values.}
+    \label{fig:dilation}
+\end{figure}
+
+
+
+
+\subsection{Magnitude Compression}
+
+The last main feature that characterizes the proposed dynamic approach is its compressing effect.
+Compression is achieved in a first instance by means of quantization, as this greatly restricts the possible number of outcomes.
+This is because the continuous infinite space is mapped to simplified quantized space with a discrete and finite number of possible output values.
+
+A second source of compression is provided by the separation of sign and magnitude information.
+This atomizes the contour representation into its minimal components: the direction of movement and the amount thereof.
+
+Even though separating the sign and the magnitude reduces the number of possible outcomes by half, the number of magnitude labels is still much too great and wasteful if not properly compressed.
+This is especially true as far as large intervals are concerned, where we might not want to model the small difference between extremely large interval values.
+
+One way to reduce the number of labels, would be to use larger steps by setting the $s$ parameter in \autoref{eq:frequency-equation} to a lower value.
+This, however, would also reduce our ability to encode smaller prosodic movements, which would result in very imprecise contour reconstruction.
+Ideally, our encoding scheme should be able to model most prosodic events, so both small and large intervals.
+
+However, we might not wish to model them with the same level of precision, since small differences between large intervals might be less important to model.
+If the processing of pitch information for speech is based on a fairly coarse-grained analysis of pitch as suggested in \citep{Zatorre2012Musical}, encoding fine-grained differences is unnecessary.
+
+For these reasons, a third source of compression is added.
+In the proposed encoding, the number of possible magnitude values is drastically reduced by rounding magnitude values to their closest triangular number approximation.
+Triangular numbers are a sequence of numbers that are obtained by continued summation of natural numbers.
+
+For instance, the sequence of natural numbers ``$1, 2, 3, 4, 5$, etc.'' would yield the sequence of triangular numbers ``$1, 3, 6, 10, 15$, etc.''.
+For my encoding scheme, an additional 0\textsuperscript{th} triangular number is included, i.e., ``$0, 1, 3, 6, 10, 15$, etc.''.
+
+Triangular numbers have the nice property that the distance between each number and the next one grows linearly.
+When we only consider intervals whose index is a triangular number we are able to consider intervals with a linearly decreasing precision.
+This means that we are able to model small intervals very precisely, with the trade-off that we model large intervals less precisely.
+
+
+
+\subsection{Encoded Contours}
+
+In order to assess the validity and usefulness of my encoding, I compared the original contours with their encoded-decoded counterparts by plotting and listening to their copy-synthesis.
+
+
+\autoref{fig:reconstructed} shows an original contour along with its encoded and decoded counterpart. 
+As we can see, the original and the reconstructed contours are quite similar, albeit with a few subtle differences. 
+In particular, observe in \autoref{fig:reconstructed} how all the numbers of steps in each pitch interval are triangular numbers (i.e., $0, 1, 3, 6, 10, 15$, etc.).
+For instance, the second syllable (i.e., ``mid'') has two intervals, where the first one has 10 steps and the second one, 6.
+Also, notice how the reconstructed contour occasionally overshoots or undershoots.
+For example, in the fifth syllable (i.e., ``naits''), the first pitch interval contains only 3 steps instead of the more accurate 4.
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/reconstructed.pgf}}
+\caption[Reconstructed contour]{Plot of the original and reconstructed contours for the utterance  ``A Midsummer Night's Dream''. The dashed horizontal lines represent the levels of the underlying pitch scale. The vertical lines represent syllable boundaries. At the bottom of each syllable boundary are the phones contained in the syllable. The dots represents the points in time where the \ac{F0} values were sampled.}
+\label{fig:reconstructed}
+\end{figure}
+
+
+
+This is because this encoding scheme was not designed with reconstruction accuracy as its main goal in mind, as it was actually conceived of from the start primarily as a way of producing extremely minimal,  flexible and dynamic representations of contours.
+
+Even though we might be prepared to accept less than perfect reconstruction as a trade-off in favor of increased flexibility, it is still important to quantify the exact extent to which the original and reconstructed contours differ.
+A measure of distance between the original and the reconstructed contour can give us an approximate and indirect way of quantifying how much of the original prosodic message has been lost.
+
+Despite the fairly noticeable differences observed in the plots of the original and reconstructed contours, the measured \ac{RMSE} distance for the entire corpus came out to a fairly low 1.03~Hz.
+\citet{Pulkki2015Communication} cite 1~Hz as the \ac{JND} threshold for a 250-500~Hz pitch range.
+This means that on average, the original and the encoded-decoded signals will largely be indistinguishable pitch-wise.
+This result was also confirmed, albeit only anecdotally, by listening to the copy-synthesis.
+
+It should be pointed out that lossless or near-lossless encoding is not a necessary requirement, nor is it the primary aim of my encoding scheme.
+As pointed out previously, the feature we are interested in preserving is not exact \ac{F0} measurements, but relative pitch changes with a strong emphasis on minimal and flexible encoding.
+However, given that the proposed encoding scheme can reconstruct the original \ac{F0} measurements to a fairly high degree, we can rest assured that converting the original measurements into pitch intervals did not result in unexpected artifacts or excessive skewing of the data.
+
+In order to better understand the effects of the encoding on the original data, I also looked at the distribution of the original \ac{F0} values (see \autoref{fig:interp-distr}) and the distribution of the reconstructed \ac{F0} values (see \autoref{fig:reconstr-distr}) for the entire corpus, after they were decoded from pitch interval sequences. 
+
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/interp-distr.pgf}}
+\caption[Interpolated \ac{F0} train distribution]{Plot of the interpolated \ac{F0} values in the training set.}
+\label{fig:interp-distr}
+\end{figure}
+
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/reconstr-distr.pgf}}
+\caption[Reconstructed \ac{F0} train distribution]{Plot of the \ac{F0} values after they were encoded to pitch intervals and then decoded back into \ac{F0} values.}
+\label{fig:reconstr-distr}
+\end{figure}
+
+
+As we can see from \autoref{fig:interp-distr} and \autoref{fig:reconstr-distr},
+\ac{F0} values from reconstructed contours retain the overall distribution of the original ones. 
+The most obvious difference is that the reconstructed \ac{F0} values cluster around the values found in the semitone scale underlying the quantization process. 
+
+One final aspect that I investigated was the pitch labels that were produced by the encoding process itself, i.e., before decoding them back into \ac{F0} values, as these are the actual values that will be fed the neural network.
+After collecting all instances of sign and magnitude for the entire corpus, the two complete sets turned out to be the following:
+
+\begin{itemize}
+  \item Sign: $-1, 0, 1$
+  \item Magnitude: $0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55$
+\end{itemize}
+
+One striking aspect of this result is that the size of these two sets is extremely small, as only three labels for the sign and only eleven labels for the magnitude were used to reconstruct the original contours for the whole corpus.
+This is somewhat unexpected, especially considering the pitch variety that can be observed in \autoref{fig:reconstr-distr} and the relatively low \ac{RMSE} distance between the original and the reconstructed contours.
+
+This results highlights another feature of this encoding scheme that I had not originally considered, i.e., its highly generative nature.
+Just as a small set of morphemes can generate a virtually infinite number of words, it should also be possible to combine pitch movements to generate a virtually infinite variety of contours, among which natural ones hopefully also reside.
+
+As we can observe in \autoref{fig:interval-distr}, the pitch interval distribution seems to follows a power-law distribution, as it is expected in many frequency rankings in the linguistic domain. 
+Also, notice how the distribution is mirrored and centered around the zero value; and how the intervals at either side of the plot are progressively further apart.
+This effect is due to the use of triangular numbers, which allow us to capture smaller intervals more precisely than larger intervals.
+
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/interval-distr.pgf}}
+\caption[Pitch interval train distribution]{Plot of the distribution of the pitch intervals generated by the encoding process for the training set.}
+\label{fig:interval-distr}
+\end{figure}
+
+
+
+\subsection{Output vectors}
+
+
+In order to use the proposed encoding in the context of \ac{DNN} models, it first needs to be converted into output vectors.
+
+Sign and magnitude information is first converted into their corresponding binary features. Based on the corpus used for training, the output binary features shown in \autoref{tab:int-feat-f0} are obtained (for more details see \autoref{chap:appendix-a}).
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{llc}
+    \toprule
+    \textbf{Description} & \textbf{Size} \\
+    \midrule
+    Sign                 &    3 \\
+    Magnitude            &   11 \\
+    \bottomrule
+  \end{tabular}
+    \caption[Intonation model \ac{F0} features]{Intonation features used as output for the \acs{F0}-\acs{DNN} model.}
+  \label{tab:int-feat-f0}
+\end{table}
+
+These binary features are then converted into two separate binary vectors (shown in \autoref{fig:output-vector}) so that they can be fed to the \ac{DNN} model. This way, one part of the network can attend to the modeling of the sign, while the other, the modeling of the magnitude.
+
+
+\begin{figure}[H]
+\centering
+\scalebox{0.9}{\input{figures/output-vector.tex}}
+\caption[Example of an output vector]{Example of an output vector. This particular set of vectors would refer to an output representing a six step downward pitch moment, where the ``$-1$'' label represents the direction of the movement and where the ``$6$'' label represents the number of step in that direction.}
+\label{fig:output-vector}
+\end{figure}
+
+
+
+
+
+
+
